@@ -1,34 +1,135 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Task Manager
 
-## Getting Started
+![demo](demo.gif)
 
-First, run the development server:
+## Implementation Steps / Thought Process
 
-```bash
-npm run dev
-# or
-yarn dev
-```
+### Setup
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- create new nextjs typescript app ( creates directory structure )
+  - `yarn create next-app --typescript task-manager`
+  - clear out scaffolded page html `index.tsx` / styles `Home.module.css` / api `api/hello.ts`
+  - setup vscode debugger [launch.json](https://gist.github.com/wickdninja/eeabefa3d38e545edc3dec673c6b5720)
+  - add prettier rules
+- start docker compose file
+  - setup postgres
+- start db
+  - `docker-compose up`
+- install/setup prisma
+  - `yarn add prisma --dev`
+  - `yarn prisma init`
+  - update .env file
+  - create schema with prisma ( include mappings for nextauth )
+  - push schema to db
+    - `yarn prisma db push`
+  - check models with prisma studio
+    - `yarn prisma studio`
+      - seeded with 1 test user and 1 test task
+  - install client
+    - `yarn add @prisma/client`
+  - generate client
+    - `yarn prisma generate`
+  - expose prisma client (singleton when local to avoid too many clients error)
+    - `lib/prisma.ts`
+    - install node types
+      - `yarn add @types/node`
+- setup auth
+  - `npm install next-auth@4 @next-auth/prisma-adapter`
+    - I experienced a yarn error due to using newer node version (currently using 18.x ).. normally would dig in deeper and resolve using the same package manager / lock file consistently, or use `nvm`, but for this exercise I just need the dependencies. So I switched to `npm`
+  - update schema for nextauth
+  - push schema changes
+    - `yarn prisma db push`
+  - create github oauth app
+    - `http://localhost:3000/api/auth`
+    - update `.env`
+      - client id, secret, callback url
+  - update `_app.tsx` to use the session provider
+  - update `index.tsx`
+    - spiked out a simple page with auth status and a link to login if not auth'd
+  - add api routes for nextauth
+    - `pages/api/auth/[...nextauth].ts`
+  - test auth
+    - originally didn't work ... found I had introduced a typo after I had copy/paste the client secret
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+### Frontend
 
-[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+- install MUI component lib
+  - https://mui.com/material-ui/getting-started/installation/
+- threw away spike re-implemented with MUI components
+  - tool bar with app name and login button
+  - when authenticated show name and image
+  - updated index to show task list or welcome text / login
+- list
+  - created static list to layout / design list
+    - I decided to just render the date for simplicity ( skipping "today" / "tomorrow") for now due to time constraints
+      - I would make use of a date library such as DateFns to assist with this normally
+- detail
+  - created layout component to share basic layout across pages
+  - created detail page with static data to design / layout quickly
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
+### Backend + Frontend Integration
 
-## Learn More
+- SSR list
+- hydrate list on client with SWR (stale-while-revalidate)
+- implement on check changed behavior
+- SSR detail
+- implement / integrate "save": client sends hydrated DTO to PUT api
+- implement / integrate "delete": client sends ID to delete API
 
-To learn more about Next.js, take a look at the following resources:
+### Clean Up
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- rebased branch and squashed commits
+- created demo gif
+- published repo to Github
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+## High Level Milestones For Production
 
-## Deploy on Vercel
+### Define "success"
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Targets, metrics, KPIs, security constraints/goals, compliance / auditing requirements, etc.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+### Design with success in mind
+
+Discover and define as many "unknowns" as possible... sometimes this means a spike to discover what we do not know.
+For example:
+
+- Determine how the different services would be hosted
+  - Which cloud (AWS, Google, Azure, etc)?
+    - If AWS, what service/s?
+      - app: (Fargate, Lambda, EKS, etc)?
+      - db: (RDS, Aurora, EKS, etc)?
+- and many other unknowns (networking, security groups, service roles, access policies, availability concerns, scalability concerns, etc)
+
+### Cloud Native / Immutable Infastructure
+
+Codify the infastructure to be immuatable and repeatable: (terraform, cloudformation, pulumi, CDK, etc)
+
+### CI / CD
+
+Create actions / pipelines that
+
+- Verify PRs before merging
+  - Build,test, maybe deploy to a test environment where it can be acceptace tested by automation, a dev, or QA
+- Continuously delivery changes on "main" to QA and / or any other pre-production environments
+- Continuously delivery changes on "main" to Production (with an approval "gate")
+  - `"gate"`: Whatever the business requires for a production release ( docs, sign off, etc.. automate as much as humanly possible )
+
+### Observability
+
+System monitoring (log collection, distributed tracing, metrics, etc.) that
+
+- allows Engineering to keep the system "highly available"
+- allows Ops to effectively and effeciently support the system
+- allows the Business to accurately measure "success"
+
+### UX
+
+***depending on business needs these can be "nice to haves" instead of **hard** requirements but can significantly increase engagement and conversion rates***
+
+- animations
+- page transistions
+- optimize TTFMP (time to first meaningful paint)
+- error boundaries
+- monitoring / tracking
+  - user experience monitoring can allow you to identify critical points in the business process that increase/decrease conversion rates.
+- A/B testing ( requires observability to measure the different cases )
