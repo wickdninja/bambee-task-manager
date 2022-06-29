@@ -110,8 +110,8 @@ Create actions / pipelines that
 
 - Verify PRs before merging
   - Build,test, maybe deploy to a test environment where it can be acceptace tested by automation, a dev, or QA
-- Continuously delivery changes on "main" to QA and / or any other pre-production environments
-- Continuously delivery changes on "main" to Production (with an approval "gate")
+- Continuously deliver changes on "main" to QA and / or any other pre-production environments
+- Continuously deliver changes on "main" to Production (with an approval "gate")
   - `"gate"`: Whatever the business requires for a production release ( docs, sign off, etc.. automate as much as humanly possible )
 
 ### Observability
